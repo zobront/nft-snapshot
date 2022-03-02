@@ -1,0 +1,16 @@
+{
+  "name": "snapshot",
+  "version": "1.0.0",
+  "description": "A script to scrape owners of a given NFT for a snapshot.",
+  "main": "nft-snapshop.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node nft-snapshot.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "csv-writer": "^1.6.0",
+    "ethers": "^5.5.4"
+  }
+}
