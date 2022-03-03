@@ -20,5 +20,5 @@ A script to scrape owners of a given NFT. Helpful for snapshots for airdrops, wh
 
 There are two options for output formats for the data:
 
-- tokensByOwner(): Lists each owner, the count of the number of NFTs they own, and the specific IDs they own.
-- ownerByTokenId(): Lists all token IDs in order and the owner associated with each.
+- tokensByOwner: Lists each owner, the count of the number of NFTs they own, and the specific IDs they own.
+- ownerByTokenId: Lists all token IDs in order and the owner associated with each.
