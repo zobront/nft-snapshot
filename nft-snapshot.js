@@ -2,7 +2,8 @@ const ethers = require("ethers")
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 const TOKEN_ADDRESS; // INSERT
-const HIGHEST_TOKEN_ID; // INSERT
+const STARTING_TOKEN_ID = 0;
+const FINAL_TOKEN_ID; // INSERT
 const PROVIDER_ENDPOINT; // INSERT
 const CHAIN_ID = 1;
 const FORMAT = "tokensByOwner"; // options: "tokensByOwner" or "ownerByTokenId"
