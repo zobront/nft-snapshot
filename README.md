@@ -4,6 +4,7 @@ A script to scrape owners of a given NFT. Helpful for snapshots for airdrops, wh
 
 ## How To Use
 
+0) Clone this repo with `git clone https://github.com/zobront/nft-snapshot.git` from your terminal.
 1) Install dependencies (ethers and csv-writer) with `npm install`.
 2) Fill out the options at the top of the script:
 
