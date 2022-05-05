@@ -9,11 +9,13 @@ A script to scrape owners of a given NFT. Helpful for snapshots for airdrops, wh
 3) Open .env, and create the following contents. Make sure all of the settings are appropriate.
 - PROVIDER_ENDPOINT: A URL from Infura or Alchemy to create a JSON RPC provider.
 - CHAIN_ID: The ID for the chain the NFT lives on (defaults to Ethereum Mainnet, ID: 1).
+- OPENSEA_TOKEN: Your OpenSea token
 
 Example File:
 ```
 PROVIDER_ENDPOINT="https://..."
 CHAIN_ID=1
+OPENSEA_TOKEN=abcdefg
 ```
 You can optionally provide these in the command line (export PROVIDER_ENDPOINT="https://...")
 
