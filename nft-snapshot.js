@@ -86,6 +86,15 @@ async function getOpenseaAssets(slug, array = undefined, next = undefined) {
 
     const assetsBody = await response.json();
     console.log(`Received ${assetsBody.assets.length} assets`);
+
+    // array.push(...assetsBody.assets.map(asset => ({
+    //     id: asset.id,
+    //     owner: asset.owner.address,
+    // })));
+
+    // HACK: OpenSea's API does not return owner properly. Both the Assets and Asset endpoints return null.
+    // The solution is currently to hit each asset individually, and extract the owner from top_ownerships.
+    // This requires N+1 requests, and is not ideal. I have an open issue with the OpenSea API team.
     for (const asset of assetsBody.assets) {
         console.log(`Getting data for ${asset.id}...`);
         const address = asset.asset_contract.address;
@@ -100,10 +109,7 @@ async function getOpenseaAssets(slug, array = undefined, next = undefined) {
             owner: hackAsset.top_ownerships[0].owner.address,
         });
     }
-    // array.push(...assetsBody.assets.map(asset => ({
-    //     id: asset.id,
-    //     owner: asset.owner.address,
-    // })));
+    
     
     if (assetsBody.next) {
         return getOpenseaAssets(slug, array, assetsBody.next);
