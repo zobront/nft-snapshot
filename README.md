@@ -29,7 +29,7 @@ nftsnap erc -a yourtokenaddress --startIndex 0 --endIndex 9999
 
 To query an OpenSea shared storefront collection. More info from OpenSea on [collection slugs](https://docs.opensea.io/reference/collection-model):
 ```
-nftsnap opensea --slug your-collection-slug --startIndex 0 --endIndex 9999
+nftsnap opensea --slug your-collection-slug
 ```
 
 ## Formats
