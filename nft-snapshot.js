@@ -112,9 +112,9 @@ async function getOpenseaAssets(slug, array = undefined, next = undefined) {
     }
 }
 
-async function writeOwnerByTokenId(assets) {
+async function writeOwnerByTokenId(name, assets) {
     const ownerByTokenIdWriter = createCsvWriter({
-        path: 'ownerByTokenId.csv',
+        path: `out/${name}.csv`,
         header: [
             {id: 'id', title: 'ID'},
             {id: 'owner', title: 'Owner'},
@@ -128,9 +128,9 @@ async function writeOwnerByTokenId(assets) {
     }
 }
 
-async function writeTokensByOwner(assets) {
+async function writeTokensByOwner(name, assets) {
     const tokensByOwnerWriter = createCsvWriter({
-        path: 'tokensByOwner.csv',
+        path: `out/${name}.csv`,
         header: [
             {id: 'address', title: 'Address'},
             {id: 'count', title: 'Count'},
@@ -156,14 +156,14 @@ async function timeAndExecute(callback) {
     console.log(`Script Completed. Total Run Time: ${timeTaken} Seconds`)
 }
 
-async function writeAssets(assets, format) {
+async function writeAssets(name, assets, format) {
     timeAndExecute(async () => {
         switch (format) {
             case "tokensByOwner":
-                await writeTokensByOwner(assets);
+                await writeTokensByOwner(name ?? 'tokensByOwner', assets);
                 break;
             case "ownerByTokenId":
-                await writeOwnerByTokenId(assets);
+                await writeOwnerByTokenId(name  ?? 'ownerByTokenId', assets);
                 break;
             default:
                 console.log("Invalid format. Please use 'tokensByOwner' or 'ownerByToken'.")
@@ -184,6 +184,11 @@ yargs(hideBin(process.argv))
     'erc', 
     'snapshot a vanilla ERC 721 or ERC 1155 contract', 
     {
+        ['name']: {
+            alias: 'n',
+            desc: 'the name of this collection',
+            type: 'string',
+        },
         ['address']: {
             alias: 'a',
             desc: 'the contract address for the collection',
@@ -206,7 +211,7 @@ yargs(hideBin(process.argv))
     async (args) => {
         const contract = getContract(args.address);
         const assets = await getErcAssets(contract, +args.startIndex, +args.endIndex);
-        await writeAssets(assets, args.format);
+        await writeAssets(name, assets, args.format);
     }
 )
 .command(
@@ -226,7 +231,7 @@ yargs(hideBin(process.argv))
             id: asset.id,
             owner: asset.owner
         }));
-        writeAssets(assets, args.format);
+        writeAssets(args.slug, assets, args.format);
     }
 )
 .argv;
