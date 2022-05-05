@@ -13,6 +13,10 @@ const CHAIN_ID = +process.env.CHAIN_ID;
 const OPENSEA_TOKEN = process.env.OPENSEA_TOKEN;
 let openseaQueried = false;
 
+function waitMs(ms) {
+    return new Promise(resolve => setTimeout(() => resolve(), ms));
+}
+
 function getContract(address) {
     const provider = new ethers.providers.JsonRpcProvider(PROVIDER_ENDPOINT, CHAIN_ID);
     const abi = ["function ownerOf (uint256) view returns (address)"];
@@ -41,9 +45,28 @@ async function getErcAssets(contract, startId, endId) {
     return assets; 
 }
 
+async function getOpenseaAsset(address, tokenId) {
+    if (openseaQueried) {
+        await waitMs(300);
+    }
+
+    openseaQueried = true;
+
+    const url = `https://api.opensea.io/api/v1/asset/${address}/${tokenId}`;
+    const headers = {
+        'X-API-KEY': OPENSEA_TOKEN
+    };
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+        throw new Error(response.statusText);
+    }
+
+    return await response.json();
+}
+
 async function getOpenseaAssets(slug, array = undefined, next = undefined) {
     if (openseaQueried) {
-        await new Promise(resolve => setTimeout(() => resolve(), 300));
+        await waitMs(300);
     }
 
     openseaQueried = true;
@@ -53,7 +76,6 @@ async function getOpenseaAssets(slug, array = undefined, next = undefined) {
     }
 
     const url = `https://api.opensea.io/api/v1/assets?collection_slug=${slug}&limit=50${next ? `&next=${next}` : ''}`;
-    console.log(url);
     const headers = {
         'X-API-KEY': OPENSEA_TOKEN
     };
@@ -64,10 +86,24 @@ async function getOpenseaAssets(slug, array = undefined, next = undefined) {
 
     const assetsBody = await response.json();
     console.log(`Received ${assetsBody.assets.length} assets`);
-    array.push(...assetsBody.assets.map(asset => ({
-        id: asset.id,
-        owner: asset.owner.address,
-    })));
+    for (const asset of assetsBody.assets) {
+        console.log(`Getting data for ${asset.id}...`);
+        const address = asset.asset_contract.address;
+        const tokenId = asset.token_id;
+        const hackAsset = await getOpenseaAsset(address, tokenId);
+        if (hackAsset.top_ownerships.length !== 1) {
+            console.log(`Unexpected: Contract ${address} id ${tokenId} has ${hackAsset.top_ownerships.length} owners.`);
+            continue;
+        }
+        array.push({
+            id: hackAsset.id,
+            owner: hackAsset.top_ownerships[0].owner.address,
+        });
+    }
+    // array.push(...assetsBody.assets.map(asset => ({
+    //     id: asset.id,
+    //     owner: asset.owner.address,
+    // })));
     
     if (assetsBody.next) {
         return getOpenseaAssets(slug, array, assetsBody.next);
