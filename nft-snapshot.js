@@ -163,18 +163,16 @@ async function timeAndExecute(callback) {
 }
 
 async function writeAssets(name, assets, format) {
-    timeAndExecute(async () => {
-        switch (format) {
-            case "tokensByOwner":
-                await writeTokensByOwner(name ?? 'tokensByOwner', assets);
-                break;
-            case "ownerByTokenId":
-                await writeOwnerByTokenId(name  ?? 'ownerByTokenId', assets);
-                break;
-            default:
-                console.log("Invalid format. Please use 'tokensByOwner' or 'ownerByToken'.")
-        }
-    });
+    switch (format) {
+        case "tokensByOwner":
+            await writeTokensByOwner(name ?? 'tokensByOwner', assets);
+            break;
+        case "ownerByTokenId":
+            await writeOwnerByTokenId(name  ?? 'ownerByTokenId', assets);
+            break;
+        default:
+            console.log("Invalid format. Please use 'tokensByOwner' or 'ownerByToken'.")
+    }
 }
 
 yargs(hideBin(process.argv))
@@ -215,9 +213,11 @@ yargs(hideBin(process.argv))
         },
     },
     async (args) => {
-        const contract = getContract(args.address);
-        const assets = await getErcAssets(contract, +args.startIndex, +args.endIndex);
-        await writeAssets(name, assets, args.format);
+        timeAndExecute(async () => {
+            const contract = getContract(args.address);
+            const assets = await getErcAssets(contract, +args.startIndex, +args.endIndex);
+            await writeAssets(args.name, assets, args.format);
+        });
     }
 )
 .command(
@@ -232,12 +232,15 @@ yargs(hideBin(process.argv))
         }
     }, 
     async (args) => {
-        const assets = (await getOpenseaAssets(args.slug))
-        .map(asset => ({
-            id: asset.id,
-            owner: asset.owner
-        }));
-        writeAssets(args.slug, assets, args.format);
+        timeAndExecute(async () => {
+            const assets = (await getOpenseaAssets(args.slug))
+            .map(asset => ({
+                id: asset.id,
+                owner: asset.owner
+            }));
+            writeAssets(args.slug, assets, args.format);
+        });
     }
 )
+.help()
 .argv;
