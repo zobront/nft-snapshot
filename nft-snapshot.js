@@ -1,18 +1,19 @@
-const ethers = require("ethers")
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+#!/usr/bin/env node
+import dotenv from 'dotenv';
+dotenv.config();
+import fetch from 'node-fetch';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
+import ethers from 'ethers';
+import csvWriter from 'csv-writer';
+const createCsvWriter = csvWriter.createObjectCsvWriter;
 
-const TOKEN_ADDRESS; // INSERT
-const STARTING_TOKEN_ID = 0;
-const HIGHEST_TOKEN_ID; // INSERT
-const PROVIDER_ENDPOINT; // INSERT
-const CHAIN_ID = 1;
-const FORMAT = "tokensByOwner"; // options: "tokensByOwner" or "ownerByTokenId"
+const PROVIDER_ENDPOINT = process.env.PROVIDER_ENDPOINT; // SEE README
+const CHAIN_ID = +process.env.CHAIN_ID;
+const OPENSEA_TOKEN = process.env.OPENSEA_TOKEN;
+let openseaQueried = false;
 
-const provider = new ethers.providers.JsonRpcProvider(PROVIDER_ENDPOINT, CHAIN_ID);
-const abi = ["function ownerOf (uint256) view returns (address)"];
-const contract = new ethers.Contract(TOKEN_ADDRESS, abi, provider);
-
-async function ownerByTokenId() {
+async function ownerByTokenId(contract, startId, endId) {
     const ownerByTokenIdWriter = createCsvWriter({
         path: 'ownerByTokenId.csv',
         header: [
@@ -21,7 +22,7 @@ async function ownerByTokenId() {
         ]
     });
 
-    for (let i = 0; i <= HIGHEST_TOKEN_ID; i++) {
+    for (let i = startId; i <= endId; i++) {
         try {
             if (i % 100 == 0) console.log(`Checkpoint: ${i}`)
             const owner = await contract.ownerOf(i);            
@@ -36,7 +37,7 @@ async function ownerByTokenId() {
     }
 }
 
-async function tokensByOwner() {
+async function tokensByOwner(contract, startId, endId) {
     const tokensByOwnerWriter = createCsvWriter({
         path: 'tokensByOwner.csv',
         header: [
@@ -46,8 +47,10 @@ async function tokensByOwner() {
         ]
     });
 
+    console.log(contract);
+
     const idsByOwner = {}
-    for (let i = 1; i <= HIGHEST_TOKEN_ID; i++) {
+    for (let i = startId; i <= endId; i++) {
         try {
             if (i % 100 == 0) console.log(`Checkpoint: ${i}`)
             const owner = await contract.ownerOf(i);
@@ -62,12 +65,19 @@ async function tokensByOwner() {
     await tokensByOwnerWriter.writeRecords(outputData)
 }
 
-async function main(format = "tokensByOwner") {
+function getContract(address) {
+    const provider = new ethers.providers.JsonRpcProvider(PROVIDER_ENDPOINT, CHAIN_ID);
+    const abi = ["function ownerOf (uint256) view returns (address)"];
+    return new ethers.Contract(address, abi, provider);
+}
+
+async function main(format, contract, startId, endId) {
     const timeBefore = new Date().getTime();
+    
     if (format == "tokensByOwner") {
-        await tokensByOwner()
+        await tokensByOwner(contract, startId, endId)
     } else if (format == "ownerByTokenId") {
-        await ownerByTokenId()
+        await ownerByTokenId(contract, startId, endId)
     } else {
         console.log("Invalid format. Please use 'tokensByOwner' or 'ownerByToken'.")
     }
@@ -77,9 +87,87 @@ async function main(format = "tokensByOwner") {
     console.log(`Script Completed. Total Run Time: ${timeTaken} Seconds`)
 }
 
-main(FORMAT)
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+async function getOpenseaAssets(slug, array = undefined, next = undefined) {
+    if (openseaQueried) {
+        await new Promise(resolve => setTimeout(() => resolve(), 300));
+    }
+
+    openseaQueried = true;
+
+    if (!array) {
+        array = [];
+    }
+
+    const url = `https://api.opensea.io/api/v1/assets?collection_slug=${slug}&limit=50${next ? `&next=${next}` : ''}`;
+    const headers = {
+        'X-API-KEY': OPENSEA_TOKEN
+    };
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+        throw new Error(response.statusText);
+    }
+
+    const assetsBody = await response.json();
+    array.push(...assetsBody.assets);
+    
+    if (assetsBody.next) {
+        return getOpenseaAssets(slug, array, assetsBody.next);
+    } else {
+        return array;
+    }
+}
+
+yargs(hideBin(process.argv))
+.option({
+    ['startIndex']: {
+        alias: 's',
+        desc: 'start index (numeric) for the collection',
+        type: 'number',
+        required: true,
+    },
+    ['endIndex']: {
+        alias: 'e',
+        desc: 'end index (numeric) for the collection',
+        type: 'number',
+        required: true,
+    },
+    ['format']: {
+        alias: 'f',
+        desc: 'format for the results (tokensByOwner or idsByOwner)',
+        type: 'string',
+        default: 'tokensByOwner'
+    }
+})
+.command(
+    'erc', 
+    'snapshot a vanilla ERC 721 or ERC 1155 contract', 
+    {
+        ['address']: {
+            alias: 'a',
+            desc: 'the contract address for the collection',
+            type: 'string',
+            required: true,
+        }
+    },
+    (args) => {
+        const contract = getContract(args.address);
+        main(args.format, contract, +args.startIndex, +args.endIndex);
+    }
+)
+.command(
+    'opensea', 
+    'snapshot an OpenSea shared storefront collection', 
+    {
+        ['slug']: {
+            alias: 'S',
+            desc: 'The opensea slug for the collection',
+            type: 'string',
+            required: true,
+        }
+    }, 
+    async (args) => {
+        const assets = await getOpenseaAssets(args.slug);
+        console.log(assets);
+    }
+)
+.argv;

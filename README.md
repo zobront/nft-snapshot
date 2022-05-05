@@ -5,16 +5,32 @@ A script to scrape owners of a given NFT. Helpful for snapshots for airdrops, wh
 ## How To Use
 
 1) Install dependencies (ethers and csv-writer) with `npm install`.
-2) Open `nft-snapshot.js` and fill out the options at the top of the script:
-
-- TOKEN_ADDRESS: Address of the token on the chain in question, formatted as "0x..."
-- STARTING_TOKEN_ID: The script will start checking owners at this ID (defaults to 0).
-- HIGHEST_TOKEN_ID: The script will check owners of IDs up to this number (inclusive).
+2) Create a file in the root of the project named .env
+3) Open .env, and create the following contents. Make sure all of the settings are appropriate.
 - PROVIDER_ENDPOINT: A URL from Infura or Alchemy to create a JSON RPC provider.
 - CHAIN_ID: The ID for the chain the NFT lives on (defaults to Ethereum Mainnet, ID: 1).
-- FORMAT: The format that you'd like the final data organized by (see section below).
 
-3) Run from the terminal with `npm run start`. It should check approximately 200 owners per minute.
+Example File:
+```
+PROVIDER_ENDPOINT="https://..."
+CHAIN_ID=1
+```
+You can optionally provide these in the command line (export PROVIDER_ENDPOINT="https://...")
+
+4) Optionally install the package globally on your system with `npm i -g ./`
+5) Use example scripts below to run the script
+
+## Example Scripts
+
+To query a self-custody collection (a typical NFT collection underneath a known ERC 721 address):
+```
+nftsnap erc -a yourtokenaddress --startIndex 0 --endIndex 9999
+```
+
+To query an OpenSea shared storefront collection. More info from OpenSea on [collection slugs](https://docs.opensea.io/reference/collection-model):
+```
+nftsnap opensea --slug your-collection-slug --startIndex 0 --endIndex 9999
+```
 
 ## Formats
 
