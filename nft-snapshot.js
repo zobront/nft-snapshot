@@ -7,6 +7,7 @@ import { hideBin } from 'yargs/helpers';
 import ethers from 'ethers';
 import fs from 'fs';
 import csvWriter from 'csv-writer';
+import moment from 'moment';
 const createCsvWriter = csvWriter.createObjectCsvWriter;
 
 const PROVIDER_ENDPOINT = process.env.PROVIDER_ENDPOINT; // SEE README
@@ -15,8 +16,12 @@ const OPENSEA_TOKEN = process.env.OPENSEA_TOKEN;
 const MORALIS_TOKEN=process.env.MORALIS_TOKEN;
 let openseaQueried = false;
 
-function waitMs(ms) {
+function setTimeoutAsync(ms) {
     return new Promise(resolve => setTimeout(() => resolve(), ms));
+}
+
+function writeTextAsync(path, string) {
+    return new Promise(resolve => fs.writeFile(path, string, { encoding: 'utf-8' }, () => resolve()));
 }
 
 function getContract(address) {
@@ -54,7 +59,7 @@ async function getErc1155Assets(address, startIndex, endIndex) {
     const assets = [];
 
     for (let id = startIndex; id <= endIndex; id++) {
-        await waitMs(300);
+        await setTimeoutAsync(300);
 
         try {
             if (id % 100 == 0) console.log(`Checkpoint: ${id}`)
@@ -89,7 +94,7 @@ async function getErc1155Assets(address, startIndex, endIndex) {
 
 async function getOpenseaAsset(address, tokenId) {
     if (openseaQueried) {
-        await waitMs(300);
+        await setTimeoutAsync(300);
     }
 
     openseaQueried = true;
@@ -108,7 +113,7 @@ async function getOpenseaAsset(address, tokenId) {
 
 async function getOpenseaAssets(slug, array = undefined, next = undefined) {
     if (openseaQueried) {
-        await waitMs(300);
+        await setTimeoutAsync(300);
     }
 
     openseaQueried = true;
@@ -204,16 +209,20 @@ async function timeAndExecute(callback) {
     console.log(`Script Completed. Total Run Time: ${timeTaken} Seconds`)
 }
 
-async function writeAssets(name, assets, format) {
+async function writeAssets(output, format) {
+    console.log(`Writing assets in the format ${format}...`);
     switch (format) {
-        case "tokensByOwner":
-            await writeTokensByOwner(name ?? 'tokensByOwner', assets);
+        case "json":
+            await writeTextAsync(`./out/${output.name}.json`, JSON.stringify(output.assets, null, 4));
+            break;
+            case "tokensByOwner":
+            await writeTokensByOwner(output.name ?? 'tokensByOwner', output.assets);
             break;
         case "ownerByTokenId":
-            await writeOwnerByTokenId(name  ?? 'ownerByTokenId', assets);
+            await writeOwnerByTokenId(output.name  ?? 'ownerByTokenId', output.assets);
             break;
         default:
-            console.log("Invalid format. Please use 'tokensByOwner' or 'ownerByToken'.")
+            console.log(`Invalid format. ${format}.`)
     }
 }
 
@@ -223,7 +232,7 @@ yargs(hideBin(process.argv))
         alias: 'f',
         desc: 'format for the results (tokensByOwner or idsByOwner)',
         type: 'string',
-        default: 'tokensByOwner'
+        default: 'json'
     }
 })
 .command(
@@ -257,9 +266,12 @@ yargs(hideBin(process.argv))
     async (args) => {
         timeAndExecute(async () => {
             const contract = getContract(args.address);
-            console.log(contract);
             const assets = await getErc721Assets(contract, +args.startIndex, +args.endIndex);
-            await writeAssets(args.name, assets, args.format);
+            const output = {
+                name: args.name,
+                assets
+            };
+            await writeAssets(output, args.format);
         });
     }
 )
@@ -294,7 +306,11 @@ yargs(hideBin(process.argv))
     async (args) => {
         timeAndExecute(async () => {
             const assets = await getErc1155Assets(args.address, +args.startIndex, +args.endIndex);
-            await writeAssets(args.name, assets, args.format);
+            const output = {
+                name: args.name,
+                assets
+            };
+            await writeAssets(output, args.format);
         });
     }
 )
@@ -316,7 +332,11 @@ yargs(hideBin(process.argv))
                 id: asset.id,
                 owner: asset.owner
             }));
-            writeAssets(args.slug, assets, args.format);
+            const output = {
+                name: args.slug,
+                assets
+            };
+            writeAssets(output, args.format);
         });
     }
 )
@@ -334,6 +354,8 @@ yargs(hideBin(process.argv))
     async (args) => {
         timeAndExecute(async () => {
             const config = JSON.parse(fs.readFileSync(args.config, { encoding: 'utf-8' }));
+            config.combine = config.combine ?? true;
+            const allAssets = {};
             for (const collection of config.collections) {
                 collection.startIndex = collection.startIndex ?? 1;
                 collection.endIndex = collection.endIndex ?? 20000;
@@ -370,7 +392,22 @@ yargs(hideBin(process.argv))
                     default:
                         throw new Error(`Unexpected collection type ${collection.type}`);
                 }
-                await writeAssets(collection.name, assets, args.format);
+                if (config.combine) {
+                    allAssets[collection.name] = assets;
+                } else {
+                    const output = {
+                        name: collection.name,
+                        assets,
+                    };
+                    await writeAssets(output, args.format);
+                }
+            }
+            if (config.combine) {
+                const output = {
+                    name: moment().format(),
+                    assets: allAssets
+                };
+                writeAssets(output, 'json');
             }
         });
     }
