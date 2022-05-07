@@ -95,7 +95,8 @@ async function getErc1155Assets(options) {
         for (const index of options.include) {
             await setTimeoutAsync(300);
             try {
-                assets.push(...getErc1155Owners(options.address, index));
+                const owners = await getErc1155Owners(options.address, index);
+                assets.push(...owners);
             } catch (err) {
                 console.log(`auto-detected end of collection at index ${id-1}.`);
                 break;
