@@ -30,24 +30,42 @@ function getContract(address) {
     return new ethers.Contract(address, abi, provider);
 }
 
-async function getErc721Assets(contract, startIndex, endIndex) {
+// options
+// {
+//     address: string,
+//     include: number[]?
+//     startIndex: number?,
+//     endIndex: number?,
+// }
+async function getErc721Assets(options) {
+    const contract = getContract(options.address);
+
     const assets = [];
 
-    for (let id = startIndex; id <= endIndex; id++) {
-        try {
-            if (id % 100 == 0) console.log(`Checkpoint: ${id}`)
-            assets.push( {
-                id,
-                owner: await contract.ownerOf(id)
-            });
-        } catch (err) {
-            if (err && err.reason && err.reason.includes('nonexistent token')) {
-                console.log(`auto-detected end of collection at index ${id-1}.`);
-                break;
-            } else {
+    if (options.include) {
+        for (const index of options.include) {
+            try {
+                assets.push(await getErc721Owner(contract, index));
+            } catch(err) {
                 console.error(`Token ${id} Error:`);
                 console.error(err.reason);
                 continue;
+            }
+        }
+    } else {
+        for (let index = (options.startIndex ?? 1); index <= (options.endIndex ?? 20000); index++) {
+            try {
+                assets.push(await getErc721Owner(contract, index));
+                
+            } catch (err) {
+                if (err && err.reason && err.reason.includes('nonexistent token')) {
+                    console.log(`auto-detected end of collection at index ${index-1}.`);
+                    break;
+                } else {
+                    console.error(`Token ${index} Error:`);
+                    console.error(err.reason);
+                    continue;
+                }
             }
         }
     }
@@ -55,41 +73,102 @@ async function getErc721Assets(contract, startIndex, endIndex) {
     return assets; 
 }
 
-async function getErc1155Assets(address, startIndex, endIndex) {
+async function getErc721Owner(contract, index) {
+    console.log(`Getting data for ${index}...`);
+    return {
+        id: index,
+        owner: await contract.ownerOf(index),
+    }
+}
+
+// options
+// {
+//     address: string,
+//     include: number[]?
+//     startIndex: number?,
+//     endIndex: number?,
+// }
+async function getErc1155Assets(options) {
     const assets = [];
 
-    for (let id = startIndex; id <= endIndex; id++) {
-        await setTimeoutAsync(300);
-
-        try {
-            if (id % 100 == 0) console.log(`Checkpoint: ${id}`)
-            const url = `https://deep-index.moralis.io/api/v2/nft/${address}/${id}/owners?chain=eth&format=decimal`;
-            const headers = {
-                'Accept': 'application/json',
-                'X-API-KEY': MORALIS_TOKEN,
-                'Content-Type': 'application/json',
-            }
-            const response = await fetch(url, { headers });
-            if (!response.ok) {
-                throw new Error(response.statusText);
-            }
-            const ownerQuery = await response.json();
-            assets.push(...ownerQuery.result.map(token => ({
-                id,
-                owner: token.owner_of   
-            })));
-        } catch (err) {
-            if (err && err.reason && err.reason.includes('nonexistent token')) {
+    if (options.include) {
+        for (const index of options.include) {
+            await setTimeoutAsync(300);
+            try {
+                assets.push(...getErc1155Owners(options.address, index));
+            } catch (err) {
                 console.log(`auto-detected end of collection at index ${id-1}.`);
                 break;
-            } else {
-                console.log(`auto-detected end of collection at index ${id-1}.`);
+            }
+        }
+    } else {
+        for (let index = (options.startIndex ?? 1); index <= (options.endIndex ?? 20000); index++) {
+            await setTimeoutAsync(300);
+            try {
+                const owners = await getErc1155Owners(options.address, index);
+                assets.push(...owners);
+            } catch (err) {
+                console.log(`auto-detected end of collection at index ${index-1}.`);
                 break;
             }
         }
     }
 
     return assets; 
+}
+
+async function getErc1155Owners(address, index) {
+    console.log(`Getting data for ${index}...`);
+    const url = `https://deep-index.moralis.io/api/v2/nft/${address}/${index}/owners?chain=eth&format=decimal`;
+    const headers = {
+        'Accept': 'application/json',
+        'X-API-KEY': MORALIS_TOKEN,
+        'Content-Type': 'application/json',
+    }
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+        throw new Error(response.statusText);
+    }
+    const ownerQuery = await response.json();
+    return ownerQuery.result.map(token => ({
+        index,
+        owner: token.owner_of   
+    }));
+}
+
+// {
+//     name: string, // opensea-slug
+//     include: number[]?
+// }
+async function getOpenseaAssets(options) {
+    const array = [];
+    const assets = await getOpenseaAssetsInCollection(options.name);
+        
+    if (options.include) {
+        for (const index of options.include) {
+            try {
+                const asset = assets.find(a => a.token_id === index);
+                if (asset) {
+                    array.push(await getOpenseaOwner(asset));
+                } else {
+                    throw new Error(`Could not find an asset for index ${index}`);
+                }
+            } catch (err) {
+                console.error(err);
+                continue;
+            }
+        }
+    } else {
+        for (const asset of assets) {
+            try {
+                array.push(await getOpenseaOwner(asset));
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    }
+
+    return array;
 }
 
 async function getOpenseaAsset(address, tokenId) {
@@ -111,7 +190,7 @@ async function getOpenseaAsset(address, tokenId) {
     return await response.json();
 }
 
-async function getOpenseaAssets(slug, array = undefined, next = undefined) {
+async function getOpenseaAssetsInCollection(slug, array = undefined, next = undefined) {
     if (openseaQueried) {
         await setTimeoutAsync(300);
     }
@@ -126,6 +205,8 @@ async function getOpenseaAssets(slug, array = undefined, next = undefined) {
     const headers = {
         'X-API-KEY': OPENSEA_TOKEN
     };
+
+
     const response = await fetch(url, { headers });
     if (!response.ok) {
         throw new Error(response.statusText);
@@ -133,36 +214,35 @@ async function getOpenseaAssets(slug, array = undefined, next = undefined) {
 
     const assetsBody = await response.json();
     console.log(`Received ${assetsBody.assets.length} assets`);
+    array.push(...assetsBody.assets);
 
-    // array.push(...assetsBody.assets.map(asset => ({
-    //     id: asset.id,
-    //     owner: asset.owner.address,
-    // })));
-
-    // HACK: OpenSea's API does not return owner properly. Both the Assets and Asset endpoints return null.
-    // The solution is currently to hit each asset individually, and extract the owner from top_ownerships.
-    // This requires N+1 requests, and is not ideal. I have an open issue with the OpenSea API team.
-    for (const asset of assetsBody.assets) {
-        console.log(`Getting data for ${asset.id}...`);
-        const address = asset.asset_contract.address;
-        const tokenId = asset.token_id;
-        const hackAsset = await getOpenseaAsset(address, tokenId);
-        if (hackAsset.top_ownerships.length !== 1) {
-            console.log(`Unexpected: Contract ${address} id ${tokenId} has ${hackAsset.top_ownerships.length} owners.`);
-            continue;
-        }
-        array.push({
-            id: hackAsset.id,
-            owner: hackAsset.top_ownerships[0].owner.address,
-        });
-    }
-    
-    
     if (assetsBody.next) {
         return getOpenseaAssets(slug, array, assetsBody.next);
     } else {
         return array;
     }
+}
+
+async function getOpenseaOwner(asset) {
+    // return {
+    //     id: asset.id,
+    //     owner: asset.owner.address
+    // };
+
+    // HACK: OpenSea's API does not return owner properly. Both the Assets and Asset endpoints return null.
+    // The solution is currently to hit each asset individually, and extract the owner from top_ownerships.
+    // This requires N+1 requests, and is not ideal. I have an open issue with the OpenSea API team.
+    const address = asset.asset_contract.address;
+    const tokenId = asset.token_id;
+    console.log(`Getting data for ${tokenId}...`);
+    const hackAsset = await getOpenseaAsset(address, tokenId);
+    if (hackAsset.top_ownerships.length !== 1) {
+        throw new Error(`Unexpected: Contract ${address} id ${tokenId} has ${hackAsset.top_ownerships.length} owners.`);
+    }
+    return {
+        id: hackAsset.id,
+        owner: hackAsset.top_ownerships[0].owner.address,
+    };
 }
 
 async function writeOwnerByTokenId(name, assets) {
@@ -243,6 +323,7 @@ yargs(hideBin(process.argv))
             alias: 'n',
             desc: 'the name of this collection',
             type: 'string',
+            required: true,
         },
         ['address']: {
             alias: 'a',
@@ -265,8 +346,11 @@ yargs(hideBin(process.argv))
     },
     async (args) => {
         timeAndExecute(async () => {
-            const contract = getContract(args.address);
-            const assets = await getErc721Assets(contract, +args.startIndex, +args.endIndex);
+            const assets = await getErc721Assets({
+                address: args.address,
+                startIndex: +args.startIndex, 
+                endIndex: +args.endIndex
+            });
             const output = {
                 name: args.name,
                 assets
@@ -283,6 +367,7 @@ yargs(hideBin(process.argv))
             alias: 'n',
             desc: 'the name of this collection',
             type: 'string',
+            required: true,
         },
         ['address']: {
             alias: 'a',
@@ -305,7 +390,11 @@ yargs(hideBin(process.argv))
     },
     async (args) => {
         timeAndExecute(async () => {
-            const assets = await getErc1155Assets(args.address, +args.startIndex, +args.endIndex);
+            const assets = await getErc1155Assets({
+                address: args.address,
+                startIndex: +args.startIndex, 
+                endIndex: +args.endIndex
+            });
             const output = {
                 name: args.name,
                 assets
@@ -327,7 +416,7 @@ yargs(hideBin(process.argv))
     }, 
     async (args) => {
         timeAndExecute(async () => {
-            const assets = (await getOpenseaAssets(args.slug))
+            const assets = (await getOpenseaAssets({ name: args.slug }))
             .map(asset => ({
                 id: asset.id,
                 owner: asset.owner
@@ -356,47 +445,45 @@ yargs(hideBin(process.argv))
             const config = JSON.parse(fs.readFileSync(args.config, { encoding: 'utf-8' }));
             config.combine = config.combine ?? true;
             const allAssets = {};
-            for (const collection of config.collections) {
-                collection.startIndex = collection.startIndex ?? 1;
-                collection.endIndex = collection.endIndex ?? 20000;
-                if (config.exclude && config.exclude.includes(collection.name)) {
-                    console.log(`skipping ${collection.name}...`);
+            for (const collectionOptions of config.collections) {
+                if (config.exclude && config.exclude.includes(collectionOptions.name)) {
+                    console.log(`skipping ${collectionOptions.name}...`);
                     continue;
                 }
-                if (!collection.name) {
+                if (!collectionOptions.name) {
                     console.log('cannot automate a collection with no name.');
                     continue;
                 }
-                if (!collection.type) {
+                if (!collectionOptions.type) {
                     console.log('cannot automate a collection with no type.');
                     continue;
                 }
                 let assets = [];
-                switch(collection.type) {
-                    case 'openSea':
-                        console.log(`automating ${collection.name}, an ${collection.type} collection...`);
-                        assets = (await getOpenseaAssets(collection.name))
+                switch(collectionOptions.type) {
+                    case 'opensea':
+                        console.log(`automating ${collectionOptions.name}, a(n) ${collectionOptions.type} collection...`);
+                        assets = (await getOpenseaAssets(collectionOptions))
                         .map(asset => ({
                             id: asset.id,
                             owner: asset.owner
                         }));
                         break;
                     case 'erc721':
-                        console.log(`automating ${collection.name}, an ${collection.type} collection, from index ${collection.startIndex} to ${collection.endIndex}...`)
-                        assets = await getErc721Assets(getContract(collection.address), collection.startIndex, collection.endIndex);
+                        console.log(`automating ${collectionOptions.name}, an ${collectionOptions.type} collection...`)
+                        assets = await getErc721Assets(collectionOptions);
                         break;
                     case 'erc1155':
-                        console.log(`automating ${collection.name}, an ${collection.type} collection, from index ${collection.startIndex} to ${collection.endIndex}...`)
-                        assets = await getErc1155Assets(collection.address, collection.startIndex, collection.endIndex);
+                        console.log(`automating ${collectionOptions.name}, an ${collectionOptions.type} collection...`)
+                        assets = await getErc1155Assets(collectionOptions);
                         break;
                     default:
-                        throw new Error(`Unexpected collection type ${collection.type}`);
+                        throw new Error(`Unexpected collection type ${collectionOptions.type}`);
                 }
                 if (config.combine) {
-                    allAssets[collection.name] = assets;
+                    allAssets[collectionOptions.name] = assets;
                 } else {
                     const output = {
-                        name: collection.name,
+                        name: collectionOptions.name,
                         assets,
                     };
                     await writeAssets(output, args.format);
