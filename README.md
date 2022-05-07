@@ -26,17 +26,56 @@ You can optionally provide these in the command line (export PROVIDER_ENDPOINT="
 
 To query a self-custody collection (a typical NFT collection underneath a known ERC 721 address):
 ```
-nftsnap erc -a yourtokenaddress --startIndex 0 --endIndex 9999
+nftsnap erc721 -n collectionname -a yourtokenaddress
+```
+
+To query a self-custody 1155 collection (a multi-issue NFT with multiple owners per NFT):
+**NOTE:** This requires a Moralis API Key
+```
+nftsnap erc1155 -n collectionname -a yourtokenaddress
 ```
 
 To query an OpenSea shared storefront collection. More info from OpenSea on [collection slugs](https://docs.opensea.io/reference/collection-model):
+**NOTE:** This requires an Opensea API Key
 ```
 nftsnap opensea --slug your-collection-slug
 ```
-
 ## Formats
 
 There are two options for output formats for the data:
 
 - tokensByOwner: Lists each owner, the count of the number of NFTs they own, and the specific IDs they own.
 - ownerByTokenId: Lists all token IDs in order and the owner associated with each.
+
+## Automation
+
+You can run an automated snapshot by creating an automate.json file in the root of the project with the following schema:
+```
+{
+    {
+    "exclude": [
+        "excluded-collection-name" 
+    ],
+    "collections": [
+        {
+            "type": "openSea",
+            "name": "opensea-collection-slug"
+        },
+        {
+            "type": "erc721",
+            "name": "721-collection-name",
+            "address": "0xAABBCC...",
+        },
+        {
+            "type": "erc1155",
+            "name": "1155-collection-name",
+            "address": "0x518Dd6f7fAb52280deF1eDf40e5500D37Ec70c41",
+        },
+    ]
+}
+```
+
+You can then run the script with
+```
+nftsnap automate
+```
