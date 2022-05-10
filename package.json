@@ -9,7 +9,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node ./src/index.js"
+    "start": "echo \"Error: do not use npm start. Use the CLI. See README.\" && exit 1"
   },
   "author": "",
   "license": "MIT",
