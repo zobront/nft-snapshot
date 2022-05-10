@@ -42,18 +42,20 @@ nftsnap opensea --slug your-collection-slug
 ```
 ## Formats
 
-There are two options for output formats for the data:
+There are three options for output formats for the data:
 
+- json: Like ownerByTokenId, but stored in a json object
 - tokensByOwner: Lists each owner, the count of the number of NFTs they own, and the specific IDs they own.
 - ownerByTokenId: Lists all token IDs in order and the owner associated with each.
 
 ## Automation
 
-You can run an automated snapshot by creating an automate.json file in the root of the project with the following schema:
+You can run an automated snapshot by creating an automate.json file in the root of the project with the following schema. This only supports json at the moment.
 ```
 {
-    {
-    "exclude": [
+    "combine": false, [optional, default=true. if false, creates a separate json file for each collection]
+    "exclude": [optional]
+    [
         "excluded-collection-name" 
     ],
     "collections": [
@@ -65,11 +67,15 @@ You can run an automated snapshot by creating an automate.json file in the root 
             "type": "erc721",
             "name": "721-collection-name",
             "address": "0xAABBCC...",
+            "startId": 0, [optional, default=1] 
+            "endId": 1999  [optional, default=20000, the script will automatically stop when it hits a failed fetch.] 
         },
         {
             "type": "erc1155",
             "name": "1155-collection-name",
             "address": "0x518Dd6f7fAb52280deF1eDf40e5500D37Ec70c41",
+            "startId": 0, [optional, default=1] 
+            "endId": 1999  [optional, default=20000, the script will automatically stop when it hits a failed fetch.]
         },
     ]
 }

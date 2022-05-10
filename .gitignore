@@ -2,5 +2,5 @@ node_modules/**
 package-lock.json
 automate.json
 .env
-out/*.csv
-out/*.json
+**/out/*.csv
+**/out/*.json
