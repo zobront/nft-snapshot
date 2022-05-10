@@ -2,14 +2,14 @@
   "name": "nft-snapshot",
   "version": "1.0.0",
   "description": "A script to scrape owners of a given NFT for a snapshot.",
-  "main": "nft-snapshot.js",
+  "main": "./src/index.js",
   "bin": {
-    "nftsnap": "nft-snapshot.js"
+    "nftsnap": "./src/cli.js"
   },
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node nft-snapshot.js"
+    "start": "node ./src/index.js"
   },
   "author": "",
   "license": "MIT",
