@@ -8,7 +8,7 @@ const PROVIDER_ENDPOINT; // INSERT
 const CHAIN_ID = 1;
 const FORMAT = "tokensByOwner"; // options: "tokensByOwner" or "ownerByTokenId"
 
-const provider = new ethers.providers.JsonRpcProvider(PROVIDER_ENDPOINT, CHAIN_ID);
+const provider = new ethers.providers.StaticJsonRpcProvider(PROVIDER_ENDPOINT, CHAIN_ID);
 const abi = ["function ownerOf (uint256) view returns (address)"];
 const contract = new ethers.Contract(TOKEN_ADDRESS, abi, provider);
 
