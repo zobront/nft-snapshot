@@ -20,8 +20,8 @@ async function ownerByTokenId() {
           {id: 'address', title: 'Address'},
         ]
     });
-
-    for (let i = 0; i <= HIGHEST_TOKEN_ID; i++) {
+    console.log("generating snapshot ...");
+    for (let i = STARTING_TOKEN_ID; i <= HIGHEST_TOKEN_ID; i++) {
         try {
             if (i % 100 == 0) console.log(`Checkpoint: ${i}`)
             const owner = await contract.ownerOf(i);            
@@ -45,9 +45,9 @@ async function tokensByOwner() {
             {id: 'ids', title: 'IDs'},
         ]
     });
-
+    console.log("generating snapshot ...");
     const idsByOwner = {}
-    for (let i = 1; i <= HIGHEST_TOKEN_ID; i++) {
+    for (let i = STARTING_TOKEN_ID; i <= HIGHEST_TOKEN_ID; i++) {
         try {
             if (i % 100 == 0) console.log(`Checkpoint: ${i}`)
             const owner = await contract.ownerOf(i);
