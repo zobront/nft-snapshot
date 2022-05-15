@@ -52,7 +52,9 @@ export async function getErc721Assets(options) {
     }
 
     return {
+        type: 'erc721',
         name: options.name,
+        address: options.address,
         assets
     };
 }

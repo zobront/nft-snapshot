@@ -39,6 +39,7 @@ export async function getOpenseaAssets(options) {
     }
 
     return {
+        type: 'opensea',
         name: options.name,
         assets: assets
     }

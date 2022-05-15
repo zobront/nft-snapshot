@@ -49,7 +49,7 @@ export async function automate(options) {
                 throw new Error(`Unexpected collection type ${collectionOptions.type}`);
         }
         console.log(`${collection.name} has ${collection.assets.length} assets.`);
-        allCollections[collection.name] = collection.assets;
+        allCollections[collection.name] = collection;
     }
     return allCollections;
 }
