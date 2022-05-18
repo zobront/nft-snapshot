@@ -6,14 +6,23 @@ import { setTimeoutAsync } from '../utils.js';
 const MORALIS_TOKEN=process.env.MORALIS_TOKEN;
 
 
-// options
-// {
-//     name: string,
-//     address: string,
-//     include: number[]?
-//     startId: number?,
-//     endId: number?,
-// }
+/**
+ * @param {{ 
+ *  name: string,
+ *  address: string,
+ *  include: number[]?
+ *  startId: number?,
+ *  endId: number?, 
+ * }} options 
+ * @returns {{
+ *      type: string,
+ *      name: string,
+ *      assets: {
+ *          id: number, 
+ *          owner: string 
+ *      }[]
+ * }} collection metadata and assets
+ */
 export async function getErc1155Assets(options) {
     const assets = [];
 

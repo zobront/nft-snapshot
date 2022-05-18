@@ -11,14 +11,23 @@ function getContract(address) {
     return new ethers.Contract(address, abi, provider);
 }
 
-// options
-// {
-//     name: string,
-//     address: string,
-//     include: number[]?
-//     startId: number?,
-//     endId: number?,
-// }
+/**
+ * @param {{ 
+ *  name: string,
+ *  address: string,
+ *  include: number[]?
+ *  startId: number?,
+ *  endId: number?, 
+ * }} options 
+ * @returns {{
+ *      type: string,
+ *      name: string,
+ *      assets: {
+ *          id: number, 
+ *          owner: string 
+ *      }[]
+ * }} collection metadata and assets
+ */
 export async function getErc721Assets(options) {
     const contract = getContract(options.address);
     const assets = [];

@@ -6,10 +6,20 @@ import { setTimeoutAsync } from '../utils.js';
 const OPENSEA_TOKEN = process.env.OPENSEA_TOKEN;
 let openseaQueried = false;
 
-// {
-//     name: string, // opensea-slug
-//     include: number[]?
-// }
+/**
+ * @param {{ 
+ *  name: string, 
+ *  include: number[]? 
+ * }} options 
+ * @returns {{
+ *      type: string,
+ *      name: string,
+ *      assets: {
+ *          id: number, 
+ *          owner: string 
+ *      }[]
+ * }} collection metadata and assets
+ */
 export async function getOpenseaAssets(options) {
     const assets = [];
     const osAssets = await getOpenseaAssetsInCollection(options.name);

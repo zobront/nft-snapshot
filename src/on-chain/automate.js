@@ -4,19 +4,27 @@ import {
     getOpenseaAssets,
 } from './index.js';
 
-// options
-// {
-//     combine: boolean?,
-//     exclude: string[]?,
-//     collections: {
-//         name: string,
-//         type: string,
-//         ...options //see options for the desired data source
-//     }
-// }
-// returns an object containing keys of collection name, and values of assets
+/**
+ * @param {{ 
+ *  exclude: string[]?, 
+ *  collections: { 
+ *      name: string, 
+ *      type: string, 
+ *      options: any 
+ *  }[] 
+ * }} options 
+ * @returns {{ 
+ *  [key: string]: { 
+ *      type: string,
+ *      name: string,
+ *      assets: {
+ *          id: number, 
+ *          owner: string 
+ *      }[]
+ *  } 
+ * }} collection metadata and assets by collection address
+ */
 export async function automate(options) {
-    options.combine = options.combine ?? true;
     const allCollections = {};
     for (const collectionOptions of options.collections) {
         if (options.exclude && options.exclude.includes(collectionOptions.name)) {
